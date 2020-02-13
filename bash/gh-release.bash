@@ -8,12 +8,12 @@ release-create() {
 	local release="$(printf "$release_json" "$version" "$name" "$branch")"
 	local release_url="$(printf "$release_endpoint" "$reponame")"
 	echo "Creating release v$version from branch $branch ..."
-	upload_url="$(curl -s -d "$release" "$release_url?access_token=$GITHUB_ACCESS_TOKEN" | upload-url)"
+	upload_url="$(curl -s -u "$GITHUB_USERNAME:$GITHUB_ACCESS_TOKEN" -d "$release" "$release_url" | upload-url)"
 	for asset in $(ls -A release); do
 		local name="$(basename $asset)"
 		echo "Uploading $name ..."
-		curl -X POST -H "Content-Type: $(mimetype $name)" --data-binary "@release/$asset" \
-			"$upload_url=$name&access_token=$GITHUB_ACCESS_TOKEN" > /dev/null
+		curl -X POST -u "$GITHUB_USERNAME:$GITHUB_ACCESS_TOKEN" -H "Content-Type: $(mimetype $name)" --data-binary "@release/$asset" \
+			"$upload_url=$name" > /dev/null
 	done
 }
 
@@ -23,12 +23,12 @@ release-destroy() {
     
     [[ "$version" == [0-9]* ]] && version="v$version"
 
-	release_id="$(curl -s "$release_url?access_token=$GITHUB_ACCESS_TOKEN" | release-id-from-tagname "$version")"
+	release_id="$(curl -s -u "$GITHUB_USERNAME:$GITHUB_ACCESS_TOKEN" "$release_url" | release-id-from-tagname "$version")"
 	echo "Deleting release..."
-	curl -s -X DELETE "$release_url/$release_id?access_token=$GITHUB_ACCESS_TOKEN"
+	curl -s -u "$GITHUB_USERNAME:$GITHUB_ACCESS_TOKEN" -X DELETE "$release_url/$release_id"
 	echo "Deleting tag..."
 	tag_url="$(printf "$ref_endpoint" "$reponame" "$version")"
-	curl -s -X DELETE "$tag_url?access_token=$GITHUB_ACCESS_TOKEN"
+	curl -s -u "$GITHUB_USERNAME:$GITHUB_ACCESS_TOKEN" -X DELETE "$tag_url"
 }
 
 usage() {
